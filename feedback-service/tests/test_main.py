@@ -5,6 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.main import app
 from app.database import Base, get_db
+from app import models
 
 # Set environment variables for Docker
 os.environ["RUNNING_IN_DOCKER"] = "1"
@@ -35,46 +36,64 @@ def test_db():
     Base.metadata.drop_all(bind=engine)
 
 @pytest.fixture(scope="function")
-def client():
-    Base.metadata.create_all(bind=engine)
-    yield TestClient(app)
-    Base.metadata.drop_all(bind=engine)
+def client(test_db):
+    return TestClient(app)
 
-def test_create_feedback(client):
+def test_create_feedback_success(client):
     response = client.post(
         "/feedback/",
-        json={"feedback": "Great team culture!"}
+        json={"feedback": "Test feedback"}
     )
     assert response.status_code == 200
     data = response.json()
-    assert data["feedback"] == "Great team culture!"
+    assert data["feedback"] == "Test feedback"
     assert "id" in data
+    assert "created_at" in data
+    assert "is_deleted" in data
     assert data["is_deleted"] == False
 
-def test_get_feedbacks(client):
-    # Create a feedback first
+def test_get_feedbacks_success(client):
+    # First create a feedback
     client.post(
         "/feedback/",
-        json={"feedback": "Great team culture!"}
+        json={"feedback": "Test feedback"}
     )
     
     response = client.get("/feedback/")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
-    assert data[0]["feedback"] == "Great team culture!"
+    assert data[0]["feedback"] == "Test feedback"
 
-def test_delete_feedbacks(client):
-    # Create a feedback first
+def test_get_feedbacks_empty(client):
+    response = client.get("/feedback/")
+    assert response.status_code == 400
+    data = response.json()
+    assert data["error_code"] == 1006  # NoDataFoundError
+    assert data["message"] == "No active feedbacks found"
+
+def test_delete_feedbacks_success(client):
+    # First create a feedback
     client.post(
         "/feedback/",
-        json={"feedback": "Great team culture!"}
+        json={"feedback": "Test feedback"}
     )
     
     response = client.delete("/feedback/")
     assert response.status_code == 200
-    assert response.json()["message"] == "All feedbacks have been soft deleted"
+    data = response.json()
+    assert data["message"] == "All feedbacks have been soft deleted"
     
-    # Verify feedback is soft deleted
-    get_response = client.get("/feedback/")
-    assert len(get_response.json()) == 0 
+    # Verify feedbacks are soft deleted
+    response = client.get("/feedback/")
+    assert response.status_code == 400
+    data = response.json()
+    assert data["error_code"] == 1006  # NoDataFoundError
+    assert data["message"] == "No active feedbacks found"
+
+def test_delete_feedbacks_empty(client):
+    response = client.delete("/feedback/")
+    assert response.status_code == 400
+    data = response.json()
+    assert data["error_code"] == 1006  # NoDataFoundError
+    assert data["message"] == "No active feedbacks found to delete" 

@@ -3,7 +3,7 @@ import os
 if os.environ.get("RUNNING_IN_DOCKER"):
     SQLALCHEMY_DATABASE_URL = "postgresql://postgres:postgres@member-db:5432/member_db"
 else:
-    SQLALCHEMY_DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/member_db"
+    SQLALCHEMY_DATABASE_URL = "postgresql://postgres:postgres@localhost:5433/member_db"
 
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base

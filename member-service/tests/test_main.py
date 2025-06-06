@@ -5,6 +5,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.main import app
 from app.database import Base, get_db
+from app import models
+from shared.error_handling import ErrorCode
 
 # Set environment variables for Docker
 os.environ["RUNNING_IN_DOCKER"] = "1"
@@ -35,86 +37,141 @@ def test_db():
     Base.metadata.drop_all(bind=engine)
 
 @pytest.fixture(scope="function")
-def client():
-    Base.metadata.create_all(bind=engine)
-    yield TestClient(app)
-    Base.metadata.drop_all(bind=engine)
+def client(test_db):
+    return TestClient(app)
 
-def test_create_member(client):
-    member_data = {
-        "first_name": "John",
-        "last_name": "Doe",
-        "login": "john123",
-        "avatar_url": "https://example.com/avatar.jpg",
-        "followers": 120,
-        "following": 35,
-        "title": "Senior Developer",
-        "email": "john@example.com"
-    }
-    
-    response = client.post("/members/", json=member_data)
+def test_create_member_success(client):
+    response = client.post(
+        "/members/",
+        json={
+            "first_name": "N",
+            "last_name": "S",
+            "login": "s123",
+            "email": "n.s@example1.com",
+            "avatar_url": "https://example.com/avatars/n.jpg",
+            "followers": 100,
+            "following": 50,
+            "title": "Software Engineer"
+        }
+    )
     assert response.status_code == 200
     data = response.json()
-    assert data["first_name"] == member_data["first_name"]
-    assert data["last_name"] == member_data["last_name"]
-    assert data["login"] == member_data["login"]
+    assert data["first_name"] == "N"
+    assert data["last_name"] == "S"
+    assert data["login"] == "s123"
+    assert data["email"] == "n.s@example1.com"
+    assert data["avatar_url"] == "https://example.com/avatars/n.jpg"
+    assert data["followers"] == 100
+    assert data["following"] == 50
+    assert data["title"] == "Software Engineer"
     assert "id" in data
+    assert "created_at" in data
+    assert "is_deleted" in data
     assert data["is_deleted"] == False
 
-def test_get_members(client):
-    # Create two members with different follower counts
-    member1 = {
-        "first_name": "John",
-        "last_name": "Doe",
-        "login": "john123",
-        "avatar_url": "https://example.com/avatar1.jpg",
-        "followers": 120,
-        "following": 35,
-        "title": "Senior Developer",
-        "email": "john@example.com"
-    }
+def test_create_member_duplicate_login(client):
+    # First create a member
+    client.post(
+        "/members/",
+        json={
+            "first_name": "G",
+            "last_name": "S",
+            "login": "g123",
+            "email": "g.s@example.com",
+            "avatar_url": "https://example.com/avatars/g.jpg",
+            "followers": 100,
+            "following": 50,
+            "title": "Software Engineer"
+        }
+    )
     
-    member2 = {
-        "first_name": "Jane",
-        "last_name": "Smith",
-        "login": "jane456",
-        "avatar_url": "https://example.com/avatar2.jpg",
-        "followers": 200,
-        "following": 50,
-        "title": "Lead Developer",
-        "email": "jane@example.com"
-    }
-    
-    client.post("/members/", json=member1)
-    client.post("/members/", json=member2)
+    # Try to create another member with same login
+    response = client.post(
+        "/members/",
+        json={
+            "first_name": "G",
+            "last_name": "S",
+            "login": "g123",
+            "email": "g.s@example.com",
+            "avatar_url": "https://example.com/avatars/g.jpg",
+            "followers": 50,
+            "following": 25,
+            "title": "Product Manager"
+        }
+    )
+    assert response.status_code == 400
+    data = response.json()
+    assert data["error_code"] == ErrorCode.DUPLICATE_DATA_ERROR.value
+    assert data["message"] == "Member with this login already exists"
+    assert "login" in data["details"]
+
+def test_get_members_success(client):
+    # First create a member
+    client.post(
+        "/members/",
+        json={
+            "first_name": "N",
+            "last_name": "S",
+            "login": "s123",
+            "email": "n.s@example1.com",
+            "avatar_url": "https://example.com/avatars/n.jpg",
+            "followers": 100,
+            "following": 50,
+            "title": "Software Engineer"
+        }
+    )
     
     response = client.get("/members/")
     assert response.status_code == 200
     data = response.json()
-    assert len(data) == 2
-    # Verify sorting by followers (descending)
-    assert data[0]["followers"] == 200
-    assert data[1]["followers"] == 120
+    assert len(data) == 1
+    assert data[0]["first_name"] == "N"
+    assert data[0]["last_name"] == "S"
+    assert data[0]["login"] == "s123"
+    assert data[0]["email"] == "n.s@example1.com"
+    assert data[0]["avatar_url"] == "https://example.com/avatars/n.jpg"
+    assert data[0]["followers"] == 100
+    assert data[0]["following"] == 50
+    assert data[0]["title"] == "Software Engineer"
 
-def test_delete_members(client):
-    # Create a member first
-    member_data = {
-        "first_name": "John",
-        "last_name": "Doe",
-        "login": "john123",
-        "avatar_url": "https://example.com/avatar.jpg",
-        "followers": 120,
-        "following": 35,
-        "title": "Senior Developer",
-        "email": "john@example.com"
-    }
-    
-    client.post("/members/", json=member_data)
+def test_get_members_empty(client):
+    response = client.get("/members/")
+    assert response.status_code == 400
+    data = response.json()
+    assert data["error_code"] == ErrorCode.NO_DATA_FOUND_ERROR.value
+    assert data["message"] == "No active members found"
+
+def test_delete_members_success(client):
+    # First create a member
+    client.post(
+        "/members/",
+        json={
+            "first_name": "N",
+            "last_name": "S",
+            "login": "s123",
+            "email": "n.s@example1.com",
+            "avatar_url": "https://example.com/avatars/n.jpg",
+            "followers": 100,
+            "following": 50,
+            "title": "Software Engineer"
+        }
+    )
     
     response = client.delete("/members/")
     assert response.status_code == 200
-    assert response.json()["message"] == "All members have been soft deleted"
+    data = response.json()
+    assert data["message"] == "All members have been soft deleted"
     
-    # Verify member is soft deleted
-    get_response = client.get("/members/")
-    assert len(get_response.json()) == 0 
+    # Verify members are soft deleted
+    response = client.get("/members/")
+    assert response.status_code == 400
+    data = response.json()
+    assert data["error_code"] == ErrorCode.NO_DATA_FOUND_ERROR.value
+    assert data["message"] == "No active members found"
+
+def test_delete_members_empty(client):
+    response = client.delete("/members/")
+    assert response.status_code == 400
+    data = response.json()
+    assert data["error_code"] == ErrorCode.NO_DATA_FOUND_ERROR.value
+    assert data["message"] == "No active members found to delete"

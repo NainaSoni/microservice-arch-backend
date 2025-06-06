@@ -1,13 +1,23 @@
 from .database import SessionLocal
 from .models import Member
+from sqlalchemy.exc import IntegrityError
+from shared.error_handling import DatabaseError
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def seed_members():
+    logger.info("Starting member seeding process...")
     db = SessionLocal()
     try:
-        # Check if we already have members
-        existing_members = db.query(Member).first()
+        # Check if we have any active members
+        existing_members = db.query(Member).filter(Member.is_deleted == False).first()
         if existing_members:
+            logger.info("Active members already exist, skipping seed")
             return
+
+        logger.info("No active members found, proceeding with seeding...")
 
         # Sample members
         members = [
@@ -45,11 +55,20 @@ def seed_members():
 
         # Add members to database
         for member in members:
-            db.add(member)
-        
-        db.commit()
+            try:
+                logger.info(f"Adding member: {member.login}")
+                db.add(member)
+                db.commit()
+                logger.info(f"Successfully added member: {member.login}")
+            except IntegrityError as e:
+                db.rollback()
+                logger.error(f"Error adding member {member.login}: {str(e)}")
+                continue
+
+        logger.info("Successfully completed member seeding")
     except Exception as e:
-        print(f"Error seeding member data: {e}")
+        logger.error(f"Error during member seeding: {e}")
         db.rollback()
+        raise DatabaseError("Failed to seed member data", {"error": str(e)})
     finally:
         db.close() 

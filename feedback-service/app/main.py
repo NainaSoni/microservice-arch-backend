@@ -3,9 +3,24 @@ from sqlalchemy.orm import Session
 from typing import List
 from . import models, schemas, database
 from .database import engine
-from .seed import seed_feedback
 import time
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import OperationalError, IntegrityError
+from shared.error_handling import (
+    ServiceException,
+    ValidationError,
+    NotFoundError,
+    InternalError,
+    DuplicateDataError,
+    NoDataFoundError,
+    DatabaseError,
+    ErrorCode
+)
+from fastapi.responses import JSONResponse
+from .seed import seed_feedback
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def init_db():
     max_retries = 5
@@ -13,18 +28,26 @@ def init_db():
     
     for attempt in range(max_retries):
         try:
+            logger.info("Attempting to create database tables...")
             models.Base.metadata.create_all(bind=engine)
+            logger.info("Database tables created successfully")
+            
             # Seed the database
+            logger.info("Starting database seeding...")
             seed_feedback()
+            logger.info("Database seeding completed")
             return
         except OperationalError as e:
             if attempt == max_retries - 1:
-                raise e
-            print(f"Database not ready. Retrying in {retry_delay} seconds...")
+                logger.error(f"Database connection failed after {max_retries} attempts: {e}")
+                raise DatabaseError("Database connection failed", {"error": str(e)})
+            logger.warning(f"Database not ready. Retrying in {retry_delay} seconds...")
             time.sleep(retry_delay)
 
 # Initialize database with retry mechanism
+logger.info("Initializing database...")
 init_db()
+logger.info("Database initialization completed")
 
 app = FastAPI(
     title="Feedback Service",
@@ -36,21 +59,70 @@ app = FastAPI(
     }]
 )
 
+@app.exception_handler(ServiceException)
+async def service_exception_handler(request, exc: ServiceException):
+    return JSONResponse(
+        status_code=400,
+        content={
+            "error_code": exc.error_code.value if isinstance(exc.error_code, ErrorCode) else exc.error_code,
+            "message": exc.message,
+            "details": exc.details
+        }
+    )
+
 @app.post("/feedback/", response_model=schemas.Feedback, tags=["feedback"])
 def create_feedback(feedback: schemas.FeedbackCreate, db: Session = Depends(database.get_db)):
-    db_feedback = models.Feedback(feedback=feedback.feedback)
-    db.add(db_feedback)
-    db.commit()
-    db.refresh(db_feedback)
-    return db_feedback
+    try:
+        db_feedback = models.Feedback(**feedback.dict())
+        db.add(db_feedback)
+        db.commit()
+        db.refresh(db_feedback)
+        return db_feedback
+    except Exception as e:
+        db.rollback()
+        if isinstance(e, ServiceException):
+            raise e
+        raise DatabaseError("Failed to create feedback", {"error": str(e)})
 
 @app.get("/feedback/", response_model=List[schemas.Feedback], tags=["feedback"])
 def get_feedbacks(db: Session = Depends(database.get_db)):
-    feedbacks = db.query(models.Feedback).filter(models.Feedback.is_deleted == False).all()
-    return feedbacks
+    try:
+        feedbacks = db.query(models.Feedback)\
+            .filter(models.Feedback.is_deleted == False)\
+            .order_by(models.Feedback.created_at.desc())\
+            .all()
+            
+        if not feedbacks:
+            raise NoDataFoundError(
+                "No active feedbacks found",
+                {"service": "feedback-service"}
+            )
+            
+        return feedbacks
+    except Exception as e:
+        if isinstance(e, ServiceException):
+            raise e
+        raise DatabaseError("Failed to fetch feedbacks", {"error": str(e)})
 
 @app.delete("/feedback/", tags=["feedback"])
 def delete_feedbacks(db: Session = Depends(database.get_db)):
-    db.query(models.Feedback).update({"is_deleted": True})
-    db.commit()
-    return {"message": "All feedbacks have been soft deleted"} 
+    try:
+        # Check if there are any active feedbacks to delete
+        active_feedbacks = db.query(models.Feedback)\
+            .filter(models.Feedback.is_deleted == False)\
+            .count()
+            
+        if active_feedbacks == 0:
+            raise NoDataFoundError(
+                "No active feedbacks found to delete",
+                {"service": "feedback-service"}
+            )
+            
+        db.query(models.Feedback).update({"is_deleted": True})
+        db.commit()
+        return {"message": "All feedbacks have been soft deleted"}
+    except Exception as e:
+        db.rollback()
+        if isinstance(e, ServiceException):
+            raise e
+        raise DatabaseError("Failed to delete feedbacks", {"error": str(e)}) 
