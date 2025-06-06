@@ -166,14 +166,15 @@ The services come with pre-seeded data for testing purposes. The seeding is auto
 To run tests for all services:
 
 ```bash
-# Run tests for feedback service
-docker-compose exec feedback-service pytest
+# Run tests for feedback service local
+cd /Users/nainasoni/Documents/Workspace/microservice-arch-backend/feedback-service && python3 -m pytest tests/
+# Run tests for feedback service on docker
+docker compose exec -e PYTHONPATH=/app feedback-service pytest tests/ -v
 
-# Run tests for member service
-docker-compose exec member-service pytest
-
-# Run tests for gateway service
-docker-compose exec gateway-service pytest
+# Run tests for member service local
+cd /Users/nainasoni/Documents/Workspace/microservice-arch-backend/member-service && python3 -m pytest tests/
+# Run tests for member service on docker
+docker compose exec -e PYTHONPATH=/app member-service pytest tests/ -v
 ```
 
 ## Project Structure

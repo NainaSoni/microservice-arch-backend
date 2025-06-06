@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   feedback-db:
     image: postgres:13
@@ -38,6 +36,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@feedback-db:5432/feedback_db
       - PORT=${FEEDBACK_SERVICE_PORT}
+      - RUNNING_IN_DOCKER=1
     ports:
       - "${FEEDBACK_SERVICE_PORT}:${FEEDBACK_SERVICE_PORT}"
     depends_on:
@@ -49,6 +48,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@member-db:5432/member_db
       - PORT=${MEMBER_SERVICE_PORT}
+      - RUNNING_IN_DOCKER=1
     ports:
       - "${MEMBER_SERVICE_PORT}:${MEMBER_SERVICE_PORT}"
     depends_on:

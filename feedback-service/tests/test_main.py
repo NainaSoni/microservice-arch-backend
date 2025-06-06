@@ -1,16 +1,17 @@
+import os
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.main import app
 from app.database import Base, get_db
-from app.models import Feedback
-import pytest
 
-# Test database URL
-SQLALCHEMY_DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/test_feedback_db"
+# Set environment variables for Docker
+os.environ["RUNNING_IN_DOCKER"] = "1"
+os.environ["DATABASE_URL"] = "postgresql://postgres:postgres@feedback-db:5432/feedback_db"
 
-# Create test database engine
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+# Create the engine using the environment variable
+engine = create_engine(os.environ["DATABASE_URL"])
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def override_get_db():
@@ -28,16 +29,16 @@ def test_db():
     Base.metadata.create_all(bind=engine)
     yield
     # Clean up all data after each test
-    with engine.connect() as connection:
+    with engine.begin() as connection:
         connection.execute("TRUNCATE TABLE feedbacks RESTART IDENTITY CASCADE")
-        connection.commit()
     # Drop all tables after all tests are done
     Base.metadata.drop_all(bind=engine)
 
 @pytest.fixture(scope="function")
-def client(test_db):
-    with TestClient(app) as test_client:
-        yield test_client
+def client():
+    Base.metadata.create_all(bind=engine)
+    yield TestClient(app)
+    Base.metadata.drop_all(bind=engine)
 
 def test_create_feedback(client):
     response = client.post(
