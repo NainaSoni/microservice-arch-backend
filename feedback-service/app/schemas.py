@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from datetime import datetime
 from typing import Optional
+from shared.validation.validators import InputSanitizer
 
 class FeedbackBase(BaseModel):
     feedback: str = Field(
@@ -10,6 +11,12 @@ class FeedbackBase(BaseModel):
         description="Feedback content",
         example="This is a great service! The interface is intuitive and the features are exactly what I needed."
     )
+
+    @validator('feedback', pre=True, always=True)
+    def sanitize_feedback(cls, v):
+        if v is None:
+            return v
+        return InputSanitizer.sanitize_string(v)
 
     class Config:
         schema_extra = {

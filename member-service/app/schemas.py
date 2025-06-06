@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field, validator
 from datetime import datetime
 from typing import Optional
+from shared.validation.validators import InputSanitizer
 
 class MemberBase(BaseModel):
     first_name: str = Field(
@@ -53,6 +54,12 @@ class MemberBase(BaseModel):
         description="Valid email address",
         example="john.doe@example.com"
     )
+
+    @validator('first_name', 'last_name', 'login', 'avatar_url', 'title', pre=True, always=True)
+    def sanitize_strings(cls, v):
+        if v is None:
+            return v
+        return InputSanitizer.sanitize_string(v)
 
     @validator('login')
     def login_alphanumeric(cls, v):

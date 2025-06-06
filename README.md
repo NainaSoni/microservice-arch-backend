@@ -169,12 +169,13 @@ To run tests for all services:
 # Run tests for feedback service local
 cd /Users/nainasoni/Documents/Workspace/microservice-arch-backend/feedback-service && python3 -m pytest tests/
 # Run tests for feedback service on docker
-docker compose exec -e PYTHONPATH=/app feedback-service pytest tests/ -v
+docker compose exec -e PYTHONPATH=/app:/app/shared:/app/.. feedback-service pytest tests/ -v
+
 
 # Run tests for member service local
 cd /Users/nainasoni/Documents/Workspace/microservice-arch-backend/member-service && python3 -m pytest tests/
 # Run tests for member service on docker
-docker compose exec -e PYTHONPATH=/app member-service pytest tests/ -v
+docker compose exec -e PYTHONPATH=/app:/app/shared:/app/.. member-service pytest tests/ -v
 ```
 
 ## Project Structure
