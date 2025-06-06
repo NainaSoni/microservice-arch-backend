@@ -4,10 +4,27 @@ from typing import List
 from . import models, schemas, database
 from .database import engine
 from .seed import seed_members
+import time
+from sqlalchemy.exc import OperationalError
 
-models.Base.metadata.create_all(bind=engine)
-# Seed the database
-seed_members()
+def init_db():
+    max_retries = 5
+    retry_delay = 2  # seconds
+    
+    for attempt in range(max_retries):
+        try:
+            models.Base.metadata.create_all(bind=engine)
+            # Seed the database
+            seed_members()
+            return
+        except OperationalError as e:
+            if attempt == max_retries - 1:
+                raise e
+            print(f"Database not ready. Retrying in {retry_delay} seconds...")
+            time.sleep(retry_delay)
+
+# Initialize database with retry mechanism
+init_db()
 
 app = FastAPI(
     title="Member Service",
