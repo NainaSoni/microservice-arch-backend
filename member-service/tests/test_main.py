@@ -175,3 +175,40 @@ def test_delete_members_empty(client):
     data = response.json()
     assert data["error_code"] == ErrorCode.NO_DATA_FOUND_ERROR.value
     assert data["message"] == "No active members found to delete"
+
+def test_delete_single_member_success(client):
+    # First create a member
+    response = client.post(
+        "/members/",
+        json={
+            "first_name": "N",
+            "last_name": "S",
+            "login": "s123",
+            "email": "n.s@example1.com",
+            "avatar_url": "https://example.com/avatars/n.jpg",
+            "followers": 100,
+            "following": 50,
+            "title": "Software Engineer"
+        }
+    )
+    member_id = response.json()["id"]
+    
+    # Delete the member
+    response = client.delete(f"/members/{member_id}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["message"] == f"Member with id {member_id} has been soft deleted"
+    
+    # Verify member is soft deleted
+    response = client.get("/members/")
+    assert response.status_code == 400
+    data = response.json()
+    assert data["error_code"] == ErrorCode.NO_DATA_FOUND_ERROR.value
+    assert data["message"] == "No active members found"
+
+def test_delete_single_member_not_found(client):
+    response = client.delete("/members/999")
+    assert response.status_code == 400
+    data = response.json()
+    assert data["error_code"] == ErrorCode.NOT_FOUND_ERROR.value
+    assert data["message"] == "Member with id 999 not found"

@@ -9,4 +9,14 @@ class Feedback(Base):
     feedback = Column(String, nullable=False)
     is_deleted = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+class Member(Base):
+    __tablename__ = "members"
+
+    id = Column(Integer, primary_key=True, index=True)
+    login = Column(String, unique=True, nullable=False)
+    password = Column(String, nullable=False)
+    is_deleted = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now()) 

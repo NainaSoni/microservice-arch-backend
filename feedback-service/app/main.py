@@ -174,4 +174,30 @@ def delete_feedbacks(
         db.rollback()
         if isinstance(e, ServiceException):
             raise e
-        raise DatabaseError("Failed to delete feedbacks", {"error": str(e)}) 
+        raise DatabaseError("Failed to delete feedbacks", {"error": str(e)})
+
+@app.delete("/feedback/{feedback_id}", tags=["feedback"])
+def delete_feedback(
+    feedback_id: int,
+    db: Session = Depends(database.get_db),
+    token_data: Token = Depends(verify_token)
+):
+    try:
+        feedback = db.query(models.Feedback)\
+            .filter(models.Feedback.id == feedback_id, models.Feedback.is_deleted == False)\
+            .first()
+            
+        if not feedback:
+            raise NotFoundError(
+                f"Feedback with id {feedback_id} not found",
+                {"service": "feedback-service"}
+            )
+            
+        feedback.is_deleted = True
+        db.commit()
+        return {"message": f"Feedback with id {feedback_id} has been soft deleted"}
+    except Exception as e:
+        db.rollback()
+        if isinstance(e, ServiceException):
+            raise e
+        raise DatabaseError("Failed to delete feedback", {"error": str(e)}) 

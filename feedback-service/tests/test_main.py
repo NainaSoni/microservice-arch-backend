@@ -98,3 +98,57 @@ def test_delete_feedbacks_success(client):
     assert data["error_code"] == ErrorCode.NO_DATA_FOUND_ERROR.value
     assert data["message"] == "No active feedbacks found"
 
+def test_delete_single_feedback_success(client):
+    # First create a feedback
+    response = client.post(
+        "/feedback/",
+        json={
+            "feedback": "Great service!"
+        }
+    )
+    feedback_id = response.json()["id"]
+    
+    # Delete the feedback
+    response = client.delete(f"/feedback/{feedback_id}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["message"] == f"Feedback with id {feedback_id} has been soft deleted"
+    
+    # Verify feedback is soft deleted
+    response = client.get("/feedback/")
+    assert response.status_code == 400
+    data = response.json()
+    assert data["error_code"] == ErrorCode.NO_DATA_FOUND_ERROR.value
+    assert data["message"] == "No active feedbacks found"
+
+def test_delete_single_feedback_not_found(client):
+    response = client.delete("/feedback/999")
+    assert response.status_code == 400
+    data = response.json()
+    assert data["error_code"] == ErrorCode.NOT_FOUND_ERROR.value
+    assert data["message"] == "Feedback with id 999 not found"
+
+def test_delete_single_member_success(client):
+    # First create a member
+    response = client.post(
+        "/member/",
+        json={
+            "login": "testuser",
+            "password": "testpassword123"
+        }
+    )
+    member_id = response.json()["id"]
+    
+    # Delete the member
+    response = client.delete(f"/member/{member_id}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["message"] == f"Member with id {member_id} has been soft deleted"
+
+def test_delete_single_member_not_found(client):
+    response = client.delete("/member/999")
+    assert response.status_code == 400
+    data = response.json()
+    assert data["error_code"] == ErrorCode.NOT_FOUND_ERROR.value
+    assert data["message"] == "Member with id 999 not found"
+

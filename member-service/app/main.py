@@ -217,4 +217,30 @@ def delete_members(
         db.rollback()
         if isinstance(e, ServiceException):
             raise e
-        raise DatabaseError("Failed to delete members", {"error": str(e)}) 
+        raise DatabaseError("Failed to delete members", {"error": str(e)})
+
+@app.delete("/members/{member_id}", tags=["members"])
+def delete_member(
+    member_id: int,
+    db: Session = Depends(database.get_db),
+    token_data: Token = Depends(verify_token)
+):
+    try:
+        member = db.query(models.Member)\
+            .filter(models.Member.id == member_id, models.Member.is_deleted == False)\
+            .first()
+            
+        if not member:
+            raise NotFoundError(
+                f"Member with id {member_id} not found",
+                {"service": "member-service"}
+            )
+            
+        member.is_deleted = True
+        db.commit()
+        return {"message": f"Member with id {member_id} has been soft deleted"}
+    except Exception as e:
+        db.rollback()
+        if isinstance(e, ServiceException):
+            raise e
+        raise DatabaseError("Failed to delete member", {"error": str(e)}) 

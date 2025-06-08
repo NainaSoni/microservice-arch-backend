@@ -132,4 +132,28 @@ async def delete_feedback(
             f"{settings.FEEDBACK_SERVICE_URL}/feedback/",
             headers={"Authorization": f"Bearer {token}"}
         )
+        return response.json()
+
+@app.delete("/feedback/{feedback_id}", tags=["feedback"])
+async def delete_feedback_by_id(
+    feedback_id: int,
+    token: str = Depends(oauth2_scheme)
+):
+    async with httpx.AsyncClient() as client:
+        response = await client.delete(
+            f"{settings.FEEDBACK_SERVICE_URL}/feedback/{feedback_id}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        return response.json()
+
+@app.delete("/members/{member_id}", tags=["members"])
+async def delete_member_by_id(
+    member_id: int,
+    token: str = Depends(oauth2_scheme)
+):
+    async with httpx.AsyncClient() as client:
+        response = await client.delete(
+            f"{settings.MEMBER_SERVICE_URL}/member/{member_id}",
+            headers={"Authorization": f"Bearer {token}"}
+        )
         return response.json() 
