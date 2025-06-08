@@ -1,8 +1,15 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from datetime import timedelta
 import httpx
 import os
 from . import schemas
+from .config import settings
+from shared.auth import (
+    Token, User, create_access_token, verify_token,
+    ACCESS_TOKEN_EXPIRE_MINUTES
+)
 
 app = FastAPI(
     title="Organization Management Gateway",
@@ -29,42 +36,100 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Configure OAuth2 with password flow
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl="token",
+    scheme_name="OAuth2PasswordBearer",
+    auto_error=True
+)
+
 # Service URLs
 FEEDBACK_SERVICE_URL = os.getenv("FEEDBACK_SERVICE_URL")
 MEMBER_SERVICE_URL = os.getenv("MEMBER_SERVICE_URL")
 
-@app.post("/api/feedback", tags=["feedback"])
-async def create_feedback(feedback: schemas.FeedbackCreate):
+@app.post("/token", response_model=Token, tags=["authentication"])
+async def login_for_access_token(
+    form_data: OAuth2PasswordRequestForm = Depends()
+):
     async with httpx.AsyncClient() as client:
-        response = await client.post(f"{FEEDBACK_SERVICE_URL}/feedback/", json=feedback.dict())
+        response = await client.post(
+            f"{settings.MEMBER_SERVICE_URL}/token",
+            data={"username": form_data.username, "password": form_data.password}
+        )
+        if response.status_code != 200:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect username or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
         return response.json()
 
-@app.get("/api/feedback", tags=["feedback"])
-async def get_feedbacks():
+@app.post("/members/", tags=["members"])
+async def create_member(
+    member_data: schemas.MemberCreate,
+    token: str = Depends(oauth2_scheme)
+):
     async with httpx.AsyncClient() as client:
-        response = await client.get(f"{FEEDBACK_SERVICE_URL}/feedback/")
+        response = await client.post(
+            f"{settings.MEMBER_SERVICE_URL}/members/",
+            json=member_data.dict(),
+            headers={"Authorization": f"Bearer {token}"}
+        )
         return response.json()
 
-@app.delete("/api/feedback", tags=["feedback"])
-async def delete_feedbacks():
+@app.get("/members/", tags=["members"])
+async def get_members(
+    token: str = Depends(oauth2_scheme)
+):
     async with httpx.AsyncClient() as client:
-        response = await client.delete(f"{FEEDBACK_SERVICE_URL}/feedback/")
+        response = await client.get(
+            f"{settings.MEMBER_SERVICE_URL}/members/",
+            headers={"Authorization": f"Bearer {token}"}
+        )
         return response.json()
 
-@app.post("/api/members", tags=["members"])
-async def create_member(member: schemas.MemberCreate):
+@app.delete("/members/", tags=["members"])
+async def delete_members(
+    token: str = Depends(oauth2_scheme)
+):
     async with httpx.AsyncClient() as client:
-        response = await client.post(f"{MEMBER_SERVICE_URL}/members/", json=member.dict())
+        response = await client.delete(
+            f"{settings.MEMBER_SERVICE_URL}/members/",
+            headers={"Authorization": f"Bearer {token}"}
+        )
         return response.json()
 
-@app.get("/api/members", tags=["members"])
-async def get_members():
+@app.post("/feedback/", tags=["feedback"])
+async def create_feedback(
+    feedback_data: schemas.FeedbackCreate,
+    token: str = Depends(oauth2_scheme)
+):
     async with httpx.AsyncClient() as client:
-        response = await client.get(f"{MEMBER_SERVICE_URL}/members/")
+        response = await client.post(
+            f"{settings.FEEDBACK_SERVICE_URL}/feedback/",
+            json=feedback_data.dict(),
+            headers={"Authorization": f"Bearer {token}"}
+        )
         return response.json()
 
-@app.delete("/api/members", tags=["members"])
-async def delete_members():
+@app.get("/feedback/", tags=["feedback"])
+async def get_feedback(
+    token: str = Depends(oauth2_scheme)
+):
     async with httpx.AsyncClient() as client:
-        response = await client.delete(f"{MEMBER_SERVICE_URL}/members/")
+        response = await client.get(
+            f"{settings.FEEDBACK_SERVICE_URL}/feedback/",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        return response.json()
+
+@app.delete("/feedback/", tags=["feedback"])
+async def delete_feedback(
+    token: str = Depends(oauth2_scheme)
+):
+    async with httpx.AsyncClient() as client:
+        response = await client.delete(
+            f"{settings.FEEDBACK_SERVICE_URL}/feedback/",
+            headers={"Authorization": f"Bearer {token}"}
+        )
         return response.json() 

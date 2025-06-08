@@ -3,9 +3,12 @@ from .models import Member
 from sqlalchemy.exc import IntegrityError
 from shared.error_handling import DatabaseError
 import logging
+from passlib.context import CryptContext
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def seed_members():
     logger.info("Starting member seeding process...")
@@ -29,7 +32,8 @@ def seed_members():
                 followers=150,
                 following=45,
                 title="Senior Developer",
-                email="john.doe@example.com"
+                email="john.doe@example.com",
+                password=pwd_context.hash("testpassword123")
             ),
             Member(
                 first_name="Jane",
@@ -39,7 +43,8 @@ def seed_members():
                 followers=200,
                 following=60,
                 title="Lead Developer",
-                email="jane.smith@example.com"
+                email="jane.smith@example.com",
+                password=pwd_context.hash("testpassword123")
             ),
             Member(
                 first_name="Mike",
@@ -49,7 +54,8 @@ def seed_members():
                 followers=100,
                 following=30,
                 title="Software Engineer",
-                email="mike.johnson@example.com"
+                email="mike.johnson@example.com",
+                password=pwd_context.hash("testpassword123")
             ),
         ]
 
@@ -65,7 +71,6 @@ def seed_members():
                 logger.error(f"Error adding member {member.login}: {str(e)}")
                 continue
 
-        logger.info("Successfully completed member seeding")
     except Exception as e:
         logger.error(f"Error during member seeding: {e}")
         db.rollback()

@@ -1,20 +1,6 @@
-services:
-  feedback-db:
-    image: postgres:13
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: feedback_db
-    ports:
-      - "5432:5432"
-    volumes:
-      - feedback-db-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+version: '3.8'
 
+services:
   member-db:
     image: postgres:13
     environment:
@@ -22,7 +8,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: member_db
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
       - member-db-data:/var/lib/postgresql/data
     healthcheck:
@@ -31,45 +17,67 @@ services:
       timeout: 5s
       retries: 5
 
-  feedback-service:
-    build:
-      context: .
-      dockerfile: feedback-service/Dockerfile
+  feedback-db:
+    image: postgres:13
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@feedback-db:5432/feedback_db
-      - PORT=${FEEDBACK_SERVICE_PORT}
-      - RUNNING_IN_DOCKER=1
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: feedback_db
     ports:
-      - "${FEEDBACK_SERVICE_PORT}:${FEEDBACK_SERVICE_PORT}"
-    depends_on:
-      feedback-db:
-        condition: service_healthy
+      - "5433:5432"
+    volumes:
+      - feedback-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   member-service:
     build:
       context: .
       dockerfile: member-service/Dockerfile
+    ports:
+      - "${MEMBER_SERVICE_PORT}:8002"
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@member-db:5432/member_db
-      - PORT=${MEMBER_SERVICE_PORT}
-      - RUNNING_IN_DOCKER=1
-    ports:
-      - "${MEMBER_SERVICE_PORT}:${MEMBER_SERVICE_PORT}"
+      - SECRET_KEY=${SECRET_KEY}
+      - ALGORITHM=${ALGORITHM}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
     depends_on:
-      member-db:
-        condition: service_healthy
+      - member-db
+
+  feedback-service:
+    build:
+      context: .
+      dockerfile: feedback-service/Dockerfile
+    ports:
+      - "${FEEDBACK_SERVICE_PORT}:8003"
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@feedback-db:5432/feedback_db
+      - SECRET_KEY=${SECRET_KEY}
+      - ALGORITHM=${ALGORITHM}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
+    depends_on:
+      - feedback-db
 
   gateway-service:
-    build: ./gateway-service
-    environment:
-      - FEEDBACK_SERVICE_URL=http://feedback-service:${FEEDBACK_SERVICE_PORT}
-      - MEMBER_SERVICE_URL=http://member-service:${MEMBER_SERVICE_PORT}
-      - PORT=${GATEWAY_SERVICE_PORT}
+    build:
+      context: .
+      dockerfile: gateway-service/Dockerfile
     ports:
-      - "${GATEWAY_SERVICE_PORT}:${GATEWAY_SERVICE_PORT}"
+      - "${GATEWAY_SERVICE_PORT}:8000"
+    environment:
+      - MEMBER_SERVICE_URL=http://member-service:8002
+      - FEEDBACK_SERVICE_URL=http://feedback-service:8003
+      - SECRET_KEY=${SECRET_KEY}
+      - ALGORITHM=${ALGORITHM}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
+    volumes:
+      - ./shared:/app/../shared
     depends_on:
-      - feedback-service
       - member-service
+      - feedback-service
 
   pgadmin:
     image: dpage/pgadmin4
@@ -79,11 +87,11 @@ services:
     ports:
       - "5050:80"
     depends_on:
-      - feedback-db
       - member-db
+      - feedback-db
     volumes:
       - ./servers.json:/pgadmin4/servers.json
 
 volumes:
-  feedback-db-data:
-  member-db-data: 
+  member-db-data:
+  feedback-db-data: 

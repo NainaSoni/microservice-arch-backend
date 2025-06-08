@@ -82,17 +82,19 @@ class MemberBase(BaseModel):
         }
 
 class MemberCreate(MemberBase):
+    password: str = Field(..., min_length=6, example="testpassword123")
     class Config:
         schema_extra = {
             "example": {
-                "first_name": "John",
-                "last_name": "Doe",
-                "login": "johndoe123",
-                "email": "john.doe@example.com",
-                "avatar_url": "https://example.com/avatars/john.jpg",
-                "followers": 100,
-                "following": 50,
-                "title": "Software Engineer"
+                "first_name": "Test",
+                "last_name": "User",
+                "login": "testuser",
+                "avatar_url": "https://example.com/avatar.png",
+                "followers": 0,
+                "following": 0,
+                "title": "Developer",
+                "email": "test.user@example.com",
+                "password": "testpassword123"
             }
         }
 

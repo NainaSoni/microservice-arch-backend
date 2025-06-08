@@ -1,9 +1,20 @@
 import os
 
-if os.environ.get("RUNNING_IN_DOCKER"):
-    SQLALCHEMY_DATABASE_URL = "postgresql://postgres:postgres@feedback-db:5432/feedback_db"
-else:
-    SQLALCHEMY_DATABASE_URL = "postgresql://postgres:postgres@localhost:5433/feedback_db"
+# if os.environ.get("RUNNING_IN_DOCKER"):
+#     SQLALCHEMY_DATABASE_URL = "postgresql://postgres:postgres@feedback-db:5432/feedback_db"
+# else:
+
+
+POSTGRES_USER = os.getenv("POSTGRES_USER", "postgres")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "postgres")
+POSTGRES_DB = os.getenv("POSTGRES_DB", "feedback_db")
+POSTGRES_HOST = os.getenv("POSTGRES_HOST", "feedback-db")
+POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
+
+SQLALCHEMY_DATABASE_URL = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+
+
+# SQLALCHEMY_DATABASE_URL = "postgresql://postgres:postgres@feedback-db:5432/feedback_db"
 
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base

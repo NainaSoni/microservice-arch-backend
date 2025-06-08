@@ -52,33 +52,35 @@ class MemberCreate(BaseModel):
         description="Valid email address",
         example="john.doe@example.com"
     )
+    password: str = Field(..., min_length=6, example="testpassword123")
 
     class Config:
         schema_extra = {
             "example": {
-                "first_name": "John",
+                "first_name": "Jane",
                 "last_name": "Doe",
-                "login": "johndoe123",
-                "email": "john.doe@example.com",
-                "avatar_url": "https://example.com/avatars/john.jpg",
-                "followers": 100,
-                "following": 50,
-                "title": "Software Engineer"
+                "login": "janedoe",
+                "avatar_url": "https://example.com/avatars/jane.jpg",
+                "followers": 150,
+                "following": 70,
+                "title": "Data Scientist",
+                "email": "jane.doe@example.com",
+                "password": "securepassword123"
             }
         }
 
 class FeedbackCreate(BaseModel):
     feedback: str = Field(
-        ..., 
-        min_length=1, 
-        max_length=1000, 
-        description="Feedback content",
-        example="This is a great service! The interface is intuitive and the features are exactly what I needed."
+        ...,
+        min_length=10,
+        max_length=500,
+        description="Text content of the feedback",
+        example="This is a great team, always supportive and innovative!"
     )
 
     class Config:
         schema_extra = {
             "example": {
-                "feedback": "This is a great service! The interface is intuitive and the features are exactly what I needed."
+                "feedback": "The project management could be improved with more frequent updates."
             }
         } 
