@@ -92,6 +92,11 @@ test-feedback:
 	@echo "Running tests in feedback service..."
 	docker compose exec -e PYTHONPATH=/app feedback-service pytest tests/ -v
 
+# Run tests in gateway service
+test-gateway:
+	@echo "Running tests in gateway service..."
+	cd gateway-service && PYTHONPATH=..:. python3 -m pytest tests/test_main.py tests/test_integration.py -v
+
 # Clean up all containers, images, and volumes
 clean:
 	@echo "Cleaning up all containers, images, and volumes..."
@@ -117,6 +122,7 @@ help:
 	@echo "  make ps-service         - Show status of a specific service"
 	@echo "  make test-member        - Run tests in member service"
 	@echo "  make test-feedback      - Run tests in feedback service"
+	@echo "  make test-gateway       - Run tests in gateway service"
 	@echo "  make clean              - Clean up all containers, images, and volumes"
 	@echo "  make help               - Show this help message"
 

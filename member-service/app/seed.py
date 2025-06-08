@@ -57,6 +57,17 @@ def seed_members():
                 email="mike.johnson@example.com",
                 password=pwd_context.hash("testpassword123")
             ),
+            Member(
+                first_name="Test",
+                last_name="User",
+                login="testuser",
+                avatar_url="https://example.com/avatars/test.jpg",
+                followers=0,
+                following=0,
+                title="Test User",
+                email="test.user@example.com",
+                password=pwd_context.hash("testpassword123")
+            ),
         ]
 
         # Add members to database

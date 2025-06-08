@@ -12,9 +12,10 @@ class Settings(BaseSettings):
     ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
 
-    class Config:
-        # Look for .env in parent directory
-        env_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env")
+    model_config = {
+        "extra": "ignore",  # This will ignore extra fields in the .env file
+        "env_file": os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env")
+    }
 
 @lru_cache()
 def get_settings():

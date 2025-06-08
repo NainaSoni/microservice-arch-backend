@@ -226,21 +226,72 @@ def delete_member(
     token_data: Token = Depends(verify_token)
 ):
     try:
-        member = db.query(models.Member)\
-            .filter(models.Member.id == member_id, models.Member.is_deleted == False)\
-            .first()
-            
+        logger.info(f"Attempting to delete member with ID: {member_id}")
+        # First check if member exists at all
+        member = db.query(models.Member).filter(models.Member.id == member_id).first()
         if not member:
+            logger.warning(f"Member with ID {member_id} does not exist in the database")
             raise NotFoundError(
                 f"Member with id {member_id} not found",
-                {"service": "member-service"}
+                {"service": "member-service", "details": "Member does not exist in the database"}
             )
             
+        # Then check if member is already deleted
+        if member.is_deleted:
+            logger.warning(f"Member with ID {member_id} is already soft deleted")
+            raise NotFoundError(
+                f"Member with id {member_id} not found",
+                {"service": "member-service", "details": "Member is already soft deleted"}
+            )
+            
+        # Perform the soft delete
         member.is_deleted = True
-        db.commit()
-        return {"message": f"Member with id {member_id} has been soft deleted"}
+        try:
+            db.commit()
+            logger.info(f"Member with ID {member_id} has been soft deleted successfully")
+            return {"message": f"Member with id {member_id} has been soft deleted"}
+        except Exception as commit_error:
+            db.rollback()
+            logger.error(f"Failed to commit soft delete for member {member_id}: {str(commit_error)}")
+            raise DatabaseError("Failed to commit member deletion", {"error": str(commit_error)})
+            
     except Exception as e:
         db.rollback()
+        logger.error(f"Error deleting member with ID {member_id}: {str(e)}")
         if isinstance(e, ServiceException):
             raise e
-        raise DatabaseError("Failed to delete member", {"error": str(e)}) 
+        raise DatabaseError("Failed to delete member", {"error": str(e)})
+
+@app.delete("/internal/members/{member_id}/hard", response_model=dict)
+def hard_delete_member(member_id: int, db: Session = Depends(database.get_db)):
+    member = db.query(models.Member).filter(models.Member.id == member_id).first()
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found")
+    db.delete(member)
+    db.commit()
+    return {"message": f"Member with id {member_id} has been hard deleted from the database"}
+
+@app.get("/members/{member_id}", response_model=schemas.Member, tags=["members"])
+def get_member(
+    member_id: int,
+    db: Session = Depends(database.get_db),
+    token_data: Token = Depends(verify_token)
+):
+    try:
+        logger.info(f"Attempting to get member with ID: {member_id}")
+        member = db.query(models.Member).filter(models.Member.id == member_id).first()
+        
+        if not member:
+            logger.warning(f"Member with ID {member_id} not found")
+            raise NotFoundError(
+                f"Member with id {member_id} not found",
+                {"service": "member-service", "details": "Member does not exist in the database"}
+            )
+            
+        logger.info(f"Found member with ID {member_id}: {member.login}")
+        return member
+    except Exception as e:
+        logger.error(f"Error getting member with ID {member_id}: {str(e)}")
+        if isinstance(e, ServiceException):
+            raise e
+        raise DatabaseError("Failed to get member", {"error": str(e)}) 

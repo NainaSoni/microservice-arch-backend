@@ -43,10 +43,6 @@ oauth2_scheme = OAuth2PasswordBearer(
     auto_error=True
 )
 
-# Service URLs
-FEEDBACK_SERVICE_URL = os.getenv("FEEDBACK_SERVICE_URL")
-MEMBER_SERVICE_URL = os.getenv("MEMBER_SERVICE_URL")
-
 @app.post("/token", response_model=Token, tags=["authentication"])
 async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends()
@@ -82,11 +78,23 @@ async def get_members(
     token: str = Depends(oauth2_scheme)
 ):
     async with httpx.AsyncClient() as client:
-        response = await client.get(
-            f"{settings.MEMBER_SERVICE_URL}/members/",
-            headers={"Authorization": f"Bearer {token}"}
-        )
-        return response.json()
+        try:
+            response = await client.get(
+                f"{settings.MEMBER_SERVICE_URL}/members/",
+                headers={"Authorization": f"Bearer {token}"}
+            )
+            if response.status_code == 401:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid authentication credentials",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            return response.json()
+        except httpx.HTTPError as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=str(e)
+            )
 
 @app.delete("/members/", tags=["members"])
 async def delete_members(
@@ -153,7 +161,7 @@ async def delete_member_by_id(
 ):
     async with httpx.AsyncClient() as client:
         response = await client.delete(
-            f"{settings.MEMBER_SERVICE_URL}/member/{member_id}",
+            f"{settings.MEMBER_SERVICE_URL}/members/{member_id}",
             headers={"Authorization": f"Bearer {token}"}
         )
         return response.json() 

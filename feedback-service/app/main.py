@@ -200,4 +200,13 @@ def delete_feedback(
         db.rollback()
         if isinstance(e, ServiceException):
             raise e
-        raise DatabaseError("Failed to delete feedback", {"error": str(e)}) 
+        raise DatabaseError("Failed to delete feedback", {"error": str(e)})
+
+@app.delete("/internal/feedback/{feedback_id}/hard", response_model=dict)
+def hard_delete_feedback(feedback_id: int, db: Session = Depends(database.get_db)):
+    feedback = db.query(models.Feedback).filter(models.Feedback.id == feedback_id).first()
+    if not feedback:
+        raise HTTPException(status_code=404, detail="Feedback not found")
+    db.delete(feedback)
+    db.commit()
+    return {"message": f"Feedback with id {feedback_id} has been hard deleted from the database"} 
