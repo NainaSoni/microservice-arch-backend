@@ -45,8 +45,8 @@ The project consists of three main services:
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
-cd <repository-name>
+  https://github.com/NainaSoni/microservice-arch-backend.git
+  cd microservice-arch-backend
 ```
 
 2. Create a `.env` file in the root directory with the following variables:
