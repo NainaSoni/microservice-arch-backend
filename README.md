@@ -20,6 +20,20 @@ The project consists of three main services:
    - Entry point for all API requests
    - Routes requests to appropriate microservices
    - Provides Swagger documentation
+   - Authentication for feedback and members routes 
+   - Include unit tests and integration tests for services 
+
+
+## OpenAPI JSON Specification
+   - URL: `http://localhost:8000/openapi.json`
+   - Raw OpenAPI/Swagger JSON specification
+   - Can be imported into tools like Postman:
+     1. Open Postman
+     2. Click "Import" button
+     3. Choose "Raw text" or "Paste raw text"
+     4. Paste the JSON content from the openapi.json URL
+     5. Click "Import"
+
 
 ## Prerequisites
 
@@ -55,6 +69,111 @@ docker-compose build --no-cache && docker-compose up
 Once the services are running, you can access the Swagger documentation at:
 ```
 http://localhost:8000/docs
+```
+
+## API Endpoints
+
+### Feedback Endpoints
+
+- `POST /api/feedback`
+  - Create new feedback
+  - Request Body:
+    ```json
+    {
+      "feedback": "Great team culture, clear communication, and strong support for growth."
+    }
+    ```
+
+- `GET /api/feedback`
+  - Get all non-deleted feedbacks
+
+- `DELETE /api/feedback/{feedback_id}`
+  - Soft delete a single feedback by ID
+
+- `DELETE /api/feedback`
+  - Soft delete all feedbacks
+
+
+### Member Endpoints
+
+- `POST /api/members`
+  - Create new member
+  - Request Body:
+    ```json
+    {
+      "first_name": "John",
+      "last_name": "Doe",
+      "login": "john123",
+      "avatar_url": "https://example.com/avatar.jpg",
+      "followers": 120,
+      "following": 35,
+      "title": "Senior Developer",
+      "email": "john@example.com",
+      "password": "testpassword123"
+    }
+    ```
+
+- `GET /api/members`
+  - Get all non-deleted members (sorted by followers descending)
+
+- `DELETE /api/members/{member_id}`
+  - Soft delete a single member by ID
+
+
+- `DELETE /api/members`
+  - Soft delete all members
+
+## Testing
+
+Run all gateway unit and integration tests using the Makefile:
+```bash
+make test-gateway
+```
+
+## Project Features
+
+- **Basic Logging**: Logs are generated for various operations to help with debugging and monitoring.
+- **Exception Handling**: Custom exception handling to manage errors gracefully.
+- **Authentication**: JWT-based authentication for secure access to endpoints.
+- **Test Cases**: Comprehensive unit and integration tests to ensure reliability and correctness.
+
+## Project Structure
+
+```
+.
+├── .env
+├── docker-compose.yml
+├── README.md
+├── feedback-service/
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   ├── app/
+│   │   ├── main.py
+│   │   ├── models.py
+│   │   ├── schemas.py
+│   │   ├── database.py
+│   │   ├── config.py
+│   │   └── seed.py
+├── member-service/
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   ├── app/
+│   │   ├── main.py
+│   │   ├── models.py
+│   │   ├── schemas.py
+│   │   ├── database.py
+│   │   ├── config.py
+│   │   └── seed.py
+└── gateway-service/
+    ├── Dockerfile
+    ├── requirements.txt
+    ├── app/
+    │   ├── main.py
+    │   ├── schemas.py
+    │   └── config.py
+    └── tests/
+        ├── test_main.py
+        └── test_integration.py
 ```
 
 ## Database Management
@@ -112,97 +231,4 @@ http://localhost:5050
      -- View all active feedbacks
      SELECT * FROM feedbacks WHERE is_deleted = false;
      ```
-   - Click "Execute" (or press F5)
-
-## API Endpoints
-
-### Feedback Endpoints
-
-- `POST /api/feedback`
-  - Create new feedback
-  - Request Body:
-    ```json
-    {
-      "feedback": "Great team culture, clear communication, and strong support for growth."
-    }
-    ```
-
-- `GET /api/feedback`
-  - Get all non-deleted feedbacks
-
-- `DELETE /api/feedback`
-  - Soft delete all feedbacks
-
-### Member Endpoints
-
-- `POST /api/members`
-  - Create new member
-  - Request Body:
-    ```json
-    {
-      "first_name": "John",
-      "last_name": "Doe",
-      "login": "john123",
-      "avatar_url": "https://example.com/avatar.jpg",
-      "followers": 120,
-      "following": 35,
-      "title": "Senior Developer",
-      "email": "john@example.com"
-    }
-    ```
-
-- `GET /api/members`
-  - Get all non-deleted members (sorted by followers descending)
-
-- `DELETE /api/members`
-  - Soft delete all members
-
-## Database Seeding
-
-The services come with pre-seeded data for testing purposes. The seeding is automatically performed when the containers start up.
-
-## Testing
-
-To run tests for all services:
-```bash
-# Run tests for feedback service on docker
-docker compose exec -e PYTHONPATH=/app feedback-service pytest tests/ -v
-
-# Run tests for member service on docker
-docker compose exec -e PYTHONPATH=/app member-service pytest tests/ -v
-```
-
-## Project Structure
-
-```
-.
-├── docker-compose.yml
-├── .env
-├── feedback-service/
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── app/
-│   │   ├── __init__.py
-│   │   ├── main.py
-│   │   ├── models.py
-│   │   ├── schemas.py
-│   │   └── database.py
-│   └── tests/
-├── member-service/
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── app/
-│   │   ├── __init__.py
-│   │   ├── main.py
-│   │   ├── models.py
-│   │   ├── schemas.py
-│   │   └── database.py
-│   └── tests/
-└── gateway-service/
-    ├── Dockerfile
-    ├── requirements.txt
-    └── app/
-        ├── __init__.py
-        ├── main.py
-        └── routes.py
-``` 
+   - Click "Execute" (or press F5) 

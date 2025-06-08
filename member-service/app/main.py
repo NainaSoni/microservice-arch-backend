@@ -98,7 +98,6 @@ async def login_for_access_token(
     db: Session = Depends(database.get_db)
 ):
     member = db.query(models.Member).filter(models.Member.login == form_data.username, models.Member.is_deleted == False).first()
-    logger.info(f"MEMBER fetched for access token : {member}")
     if not member or not pwd_context.verify(form_data.password, member.password):
         raise HTTPException(status_code=400, detail="Incorrect username or password")
     
@@ -150,17 +149,14 @@ def create_member(
         return db_member
     except IntegrityError as e:
         db.rollback()
-        # This catch is a fallback in case of a race condition,
-        # where the uniqueness check passes but another transaction
-        # inserts the same email/login before this one commits.
-        # Although less likely with the explicit checks above, it's good practice.
-        if "members_login_key" in str(e): # Check for login unique constraint violation
+       
+        if "members_login_key" in str(e):
             raise ServiceException(
                 "Member with this login already exists (race condition)",
                 ErrorCode.DUPLICATE_DATA_ERROR,
                 {"login": member.login, "error": str(e)}
             )
-        elif "members_email_key" in str(e): # Check for email unique constraint violation
+        elif "members_email_key" in str(e): 
             raise ServiceException(
                 "Member with this email already exists (race condition)",
                 ErrorCode.DUPLICATE_DATA_ERROR,

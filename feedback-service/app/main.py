@@ -94,7 +94,6 @@ async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(database.get_db)
 ):
-    # In a real application, you would verify the password against a hashed password
     member = db.query(models.Member).filter(models.Member.login == form_data.username).first()
     if not member:
         raise HTTPException(
@@ -156,7 +155,6 @@ def delete_feedbacks(
     token_data: Token = Depends(verify_token)
 ):
     try:
-        # Check if there are any active feedbacks to delete
         active_feedbacks = db.query(models.Feedback)\
             .filter(models.Feedback.is_deleted == False)\
             .count()
