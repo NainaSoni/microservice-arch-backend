@@ -57,6 +57,15 @@ POSTGRES_DB=organization_db
 FEEDBACK_SERVICE_PORT=8001
 MEMBER_SERVICE_PORT=8002
 GATEWAY_SERVICE_PORT=8000
+
+# Service URLs
+MEMBER_SERVICE_URL=http://localhost:8002
+FEEDBACK_SERVICE_URL=http://localhost:8001
+
+# Authentication settings
+SECRET_KEY=your-secret-key-here
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
 ```
 
 3. Build and start the services:
@@ -72,6 +81,16 @@ http://localhost:8000/docs
 ```
 
 ## API Endpoints
+
+### Get Authentication token 
+- `POST /token`
+Try with any seeded member in DB:
+
+```json
+    {
+      "username": "johndoe",
+      "password": "testpassword123"
+    }
 
 ### Feedback Endpoints
 
@@ -131,10 +150,9 @@ make test-gateway
 ```
 
 ## Project Features
-
-- **Basic Logging**: Logs are generated for various operations to help with debugging and monitoring.
-- **Exception Handling**: Custom exception handling to manage errors gracefully.
 - **Authentication**: JWT-based authentication for secure access to endpoints.
+- **Exception Handling**: Custom exception handling to manage errors gracefully.
+- **Basic Logging**: Logs are generated for various operations to help with debugging and monitoring.
 - **Test Cases**: Comprehensive unit and integration tests to ensure reliability and correctness.
 
 ## Project Structure
@@ -174,6 +192,13 @@ make test-gateway
     └── tests/
         ├── test_main.py
         └── test_integration.py
+        │   │   └── seed.py
+└── shared/
+    ├── auth.py
+    ├── error_handling.py
+    └── validator.py
+
+
 ```
 
 ## Database Management

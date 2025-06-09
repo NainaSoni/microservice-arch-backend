@@ -11,7 +11,6 @@ COPY shared ./shared
 
 # Copy the service files
 COPY member-service/app ./app
-COPY member-service/tests ./tests
 
 ENV PYTHONPATH="/app:/app/shared:/app/.."
 

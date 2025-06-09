@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field, validator
 from datetime import datetime
 from typing import Optional
-from shared.validation.validators import InputSanitizer
+from shared.validators import InputSanitizer
 
 class MemberBase(BaseModel):
     first_name: str = Field(

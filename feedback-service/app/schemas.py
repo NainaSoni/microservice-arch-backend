@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field, validator
 from datetime import datetime
 from typing import Optional
-from shared.validation.validators import InputSanitizer
+from shared.validators import InputSanitizer
 
 class FeedbackBase(BaseModel):
     feedback: str = Field(
