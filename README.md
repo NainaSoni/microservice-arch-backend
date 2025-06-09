@@ -82,15 +82,14 @@ http://localhost:8000/docs
 
 ## API Endpoints
 
-### Get Authentication token 
+### Get Authentication token (Try with any seeded member in DB)
 - `POST /token`
-Try with any seeded member in DB:
-
-```json
-    {
-      "username": "johndoe",
-      "password": "testpassword123"
-    }
+  - Request Body:
+  ```json
+      {
+        "username": "johndoe",
+        "password": "testpassword123"
+      }
 
 ### Feedback Endpoints
 
